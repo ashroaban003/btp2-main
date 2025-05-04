@@ -1,15 +1,22 @@
 import openai
 import os
 
+openai.api_type = "azure"
+openai.api_key = os.getenv("AZURE_OPENAI_KEY")
+openai.api_base = os.getenv("AZURE_OPENAI_BASE_URL")
+openai.api_version = os.getenv("AZURE_OPENAI_API_VERSION")
+
+
 def test_api_key():
     try:
-        openai.api_key = os.getenv('OPENAI_API_KEY')
+        deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT")
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "user", "content": "Say 'API key is working' if you can read this."}
-            ]
+            engine=deployment_name,
+            messages=[{"role": "user", "content": "Hello from GitHub Actions!"}],
+            temperature=0.7,
+            max_tokens=100,
         )
+
         print("API Response:", response.choices[0].message.content)
         return True
     except Exception as e:
