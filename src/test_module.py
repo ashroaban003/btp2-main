@@ -1,27 +1,38 @@
-class BinarySearch:
-    def __init__(self, arr):
-        self.arr = sorted(arr)  # Ensure the array is sorted
+def merge_sort(arr):
+    if len(arr) <= 1:
+        return arr
 
-    def search(self, target):
-        left, right = 0, len(self.arr) - 1
-        while left <= right:
-            mid = (left + right) // 2
-            if self.arr[mid] == target:
-                return mid
-            elif self.arr[mid] < target:
-                left = mid + 1
-            else:
-                right = mid - 1
-        return -1  # Not found
+    # Divide
+    mid = len(arr) // 2
+    left_half = merge_sort(arr[:mid])
+    right_half = merge_sort(arr[mid:])
 
-# Usage
-arr = [34, 7, 23, 32, 5, 62]
-target = 23
+    # Conquer (merge)
+    return merge(left_half, right_half)
 
-bs = BinarySearch(arr)
-index = bs.search(target)
 
-if index != -1:
-    print(f"Element {target} found at index {index}")
-else:
-    print(f"Element {target} not found")
+def merge(left, right):
+    result = []
+    i = j = 0
+
+    # Merge while comparing elements
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+
+    # Add remaining elements from both halves
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
+
+
+# Example usage
+if __name__ == "__main__":
+    arr = [5, 2, 9, 1, 5, 6]
+    print("Original:", arr)
+    sorted_arr = merge_sort(arr)
+    print("Sorted:  ", sorted_arr)
