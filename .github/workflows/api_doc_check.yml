@@ -1,0 +1,76 @@
+name: Check Documentation Updates
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**/*.py'
+      - '.github/workflows/api_doc_check.yml'
+      - 'scripts/analyze_py_changes.py'
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  check-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install PyGithub
+      
+      - name: Check for Python file changes
+        id: check_changes
+        run: |
+          echo "Current commit:"
+          git log -1 --pretty=format:"%H %s"
+          echo "Previous commit:"
+          git log -2 --pretty=format:"%H %s"
+          echo "Modified files:"
+          git diff --name-only HEAD^ HEAD
+          
+          # Get modified Python files
+          MODIFIED_FILES=$(git diff --name-only HEAD^ HEAD | grep 'src/.*\.py$')
+          echo "Modified Python files: $MODIFIED_FILES"
+          
+          if [ -n "$MODIFIED_FILES" ]; then
+            echo "modified_files=$MODIFIED_FILES" >> $GITHUB_OUTPUT
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Test API key
+        if: steps.check_changes.outputs.changes_detected == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python scripts/test_api.py
+
+      - name: Process changes
+        if: steps.check_changes.outputs.changes_detected == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          for file in ${{ steps.check_changes.outputs.modified_files }}; do
+            echo "Processing $file"
+            echo "Current content:"
+            cat "$file"
+            echo "Previous content:"
+            git show HEAD^:"$file"
+            python scripts/analyze_py_changes.py "$file"
+          done

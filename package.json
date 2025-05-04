@@ -1,0 +1,14 @@
+{
+  "name": "btp2",
+  "version": "1.0.0",
+  "description": "Project for testing GitHub Actions with AST-based analysis",
+  "main": "scripts/update_docs.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "glob": "^8.0.3"
+  }
+}
