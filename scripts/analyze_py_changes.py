@@ -262,7 +262,7 @@ def create_api_failure_issue(py_file: str, error: str) -> None:
         print("Would create issue with content:")
         print(f"Title: Documentation Update Needed")
         print(f"Body: The file {py_file} has been modified. Please review and update the documentation for the following changes:\n")
-        print("This is an automated issue created because the OpenAI API key is not available. Please manually update the documentation as needed.\n")
+        print("This is an automated issue created because the OpenAI API1 key is not available. Please manually update the documentation as needed.\n")
         print("Steps to Update Documentation:")
         print("1. Review the changes in {py_file}")
         print("2. Update the corresponding documentation in src/api/{os.path.splitext(os.path.basename(py_file))[0]}.md")
@@ -300,7 +300,7 @@ def create_api_failure_issue(py_file: str, error: str) -> None:
         for change in changes:
             body += f"```python\n{change}\n```\n\n"
             
-        body += "This is an automated issue created because the OpenAI API key is not available. Please manually update the documentation as needed.\n\n"
+        body += "This is an automated issue created because the Azure2 OpenAI API key is not available. Please manually update the documentation as needed.\n\n"
         body += "Steps to Update Documentation:\n"
         body += f"1. Review the changes in `{py_file}`\n"
         body += f"2. Update the corresponding documentation in `src/api/{os.path.splitext(os.path.basename(py_file))[0]}.md`\n"
@@ -380,7 +380,7 @@ def analyze_changes(file_path: str) -> None:
                         if element['docstring']:
                             body += f'"""{element["docstring"]}"""\n'
                         body += "```\n\n"
-                body += "This is an automated issue created because the OpenAI API key is not available. Please manually update the documentation as needed.\n\n"
+                body += "This is an automated issue created because the Azure00 OpenAI API key is not available. Please manually update the documentation as needed.\n\n"
                 body += "Steps to Update Documentation:\n"
                 body += f"1. Review the changes in {file_path}\n"
                 body += f"2. Update the corresponding documentation in src/api/{os.path.splitext(os.path.basename(file_path))[0]}.md\n"
@@ -413,7 +413,7 @@ def analyze_changes(file_path: str) -> None:
                         body += f'"""{element["docstring"]}"""\n'
                     body += "```\n\n"
         
-        body += "This is an automated issue created because the OpenAI API key is not available. Please manually update the documentation as needed.\n\n"
+        body += "This is an automated issue created because the Azure01 OpenAI API key is not available. Please manually update the documentation as needed.\n\n"
         body += "Steps to Update Documentation:\n"
         body += f"1. Review the changes in {file_path}\n"
         body += f"2. Update the corresponding documentation in src/api/{os.path.splitext(os.path.basename(file_path))[0]}.md\n"
