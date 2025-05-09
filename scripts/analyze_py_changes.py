@@ -412,7 +412,10 @@ def analyze_changes(file_path: str) -> None:
                     if element['docstring']:
                         body += f'"""{element["docstring"]}"""\n'
                     body += "```\n\n"
-        
+        if test_api_key():
+         body += "✅ API key is working!"
+        else:
+         body+="❌ API key is not working!"
         body += "This is an automated issue created because the Azure01 OpenAI API key is not available. Please manually update the documentation as needed.\n\n"
         body += "Steps to Update Documentation:\n"
         body += f"1. Review the changes in {file_path}\n"
