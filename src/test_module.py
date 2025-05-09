@@ -1,38 +1,21 @@
-def merge_sort(arr):
-    if len(arr) <= 1:
-        return arr
+def is_prime(n):
+    if n <= 1:
+        return False
+    for i in range(2, int(n**0.5) + 1):
+        if n % i == 0:
+            return False
+    return True
 
-    # Divide
-    mid = len(arr) // 2
-    left_half = merge_sort(arr[:mid])
-    right_half = merge_sort(arr[mid:])
+def print_primes_up_to(limit):
+    print(f"Prime numbers up to {limit}:")
+    for num in range(2, limit + 1):
+        if is_prime(num):
+            print(num, end=' ')
+    print()
 
-    # Conquer (merge)
-    return merge(left_half, right_half)
-
-
-def merge(left, right):
-    result = []
-    i = j = 0
-
-    # Merge while comparing elements
-    while i < len(left) and j < len(right):
-        if left[i] <= right[j]:
-            result.append(left[i])
-            i += 1
-        else:
-            result.append(right[j])
-            j += 1
-
-    # Add remaining elements from both halves
-    result.extend(left[i:])
-    result.extend(right[j:])
-    return result
-
-
-# Example usage
 if __name__ == "__main__":
-    arr = [5, 2, 9, 1, 5, 6]
-    print("Original:", arr)
-    sorted_arr = merge_sort(arr)
-    print("Sorted:  ", sorted_arr)
+    try:
+        user_input = int(input("Enter a number: "))
+        print_primes_up_to(user_input)
+    except ValueError:
+        print("Please enter a valid integer.")

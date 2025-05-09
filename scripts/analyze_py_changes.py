@@ -1,5 +1,6 @@
 import ast
 import os
+import openai
 import sys
 import subprocess
 from typing import List, Dict, Any, Set, Optional, Tuple
@@ -428,9 +429,34 @@ def analyze_changes(file_path: str) -> None:
             f"Error message: {error_msg}\n\nPlease check the file and try again."
         )
 
+openai.api_type = "azure"
+openai.api_key = os.getenv("AZURE_OPENAI_KEY")
+openai.api_base = os.getenv("AZURE_OPENAI_BASE_URL")
+openai.api_version = os.getenv("AZURE_OPENAI_API_VERSION")
+
+
+def test_api_key():
+    try:
+        deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+        response = openai.ChatCompletion.create(
+            engine=deployment_name,
+            messages=[{"role": "user", "content": "Hello from GitHub Actions!"}],
+            temperature=0.7,
+            max_tokens=100,
+        )
+
+        print("API Response:", response.choices[0].message.content)
+        return True
+    except Exception as e:
+        print("Error:", str(e))
+        return False
+
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         print("Usage: python analyze_py_changes.py <file_path>")
         sys.exit(1)
-    
+    if test_api_key():
+        print("✅ API key is working!")
+    else:
+        print("❌ API key is not working!") 
     analyze_changes(sys.argv[1])
