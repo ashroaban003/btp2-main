@@ -1,27 +1,21 @@
-class BinarySearch:
-    def __init__(self, arr):
-        self.arr = sorted(arr)  # Ensure the array is sorted
+def is_prime(n):
+    if n <= 1:
+        return False
+    for i in range(2, int(n**0.5) + 1):
+        if n % i == 0:
+            return False
+    return True
 
-    def search(self, target):
-        left, right = 0, len(self.arr) - 1
-        while left <= right:
-            mid = (left + right) // 2
-            if self.arr[mid] == target:
-                return mid
-            elif self.arr[mid] < target:
-                left = mid + 1
-            else:
-                right = mid - 1
-        return -1  # Not found
+def print_primes_up_to(limit):
+    print(f"Prime numbers up to {limit}:")
+    for num in range(2, limit + 1):
+        if is_prime(num):
+            print(num, end=' ')
+    print()
 
-# Usage
-arr = [34, 7, 23, 32, 5, 62]
-target = 23
-
-bs = BinarySearch(arr)
-index = bs.search(target)
-
-if index != -1:
-    print(f"Element {target} found at index {index}")
-else:
-    print(f"Element {target} not found")
+if __name__ == "__main__":
+    try:
+        user_input = int(input("Enter a number: "))
+        print_primes_up_to(user_input)
+    except ValueError:
+        print("Please enter a valid integer.")
