@@ -5,7 +5,6 @@ import subprocess
 import json
 from typing import List, Dict, Any, Set, Optional, Tuple
 from github import Github
-from openai import OpenAI
 import requests
 import json
 
