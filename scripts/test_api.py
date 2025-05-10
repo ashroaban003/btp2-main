@@ -31,7 +31,7 @@ def test_api_key():
 
     if response.status_code == 200:
         result = response.json()
-        print("💬 Gemini Response:\n")
+        print("💬 Gemini Response:\n"+result)
         return True
     else:
         False
