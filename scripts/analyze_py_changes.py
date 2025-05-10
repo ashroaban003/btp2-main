@@ -1,10 +1,13 @@
 import ast
 import os
-import openai
 import sys
 import subprocess
+import json
 from typing import List, Dict, Any, Set, Optional, Tuple
 from github import Github
+from openai import OpenAI
+import requests
+import json
 
 def get_env_vars() -> Tuple[Optional[str], Optional[str]]:
     """Get GitHub token and repository name from environment variables."""
@@ -236,7 +239,7 @@ def create_readme_issue(py_file: str, changes: List[Dict[str, Any]]):
         
         issue_title = f"README Update Needed for {os.path.basename(py_file)}"
         issue_body = f"""
-The following changes in `{py_file}` require updates to the README.md file:
+The following changes in {py_file} require updates to the README.md file:
 
 {changes_text}
 
@@ -255,66 +258,64 @@ Please review and update the README.md file to reflect these changes.
         print(f"Title: {issue_title}")
         print(f"Body: {issue_body}")
 
-def create_api_failure_issue(py_file: str, error: str) -> None:
+def create_api_failure_issue(file_path: str, changes: Dict[str, List[str]]) -> None:
     """Create a GitHub issue when API key fails."""
-    token, repo = get_env_vars()
-    if not token or not repo:
-        print("Would create issue with content:")
-        print(f"Title: Documentation Update Needed")
-        print(f"Body: The file {py_file} has been modified. Please review and update the documentation for the following changes:\n")
-        print("This is an automated issue created because the OpenAI API1 key is not available. Please manually update the documentation as needed.\n")
-        print("Steps to Update Documentation:")
-        print("1. Review the changes in {py_file}")
-        print("2. Update the corresponding documentation in src/api/{os.path.splitext(os.path.basename(py_file))[0]}.md")
-        print("3. Create a pull request with the documentation updates")
-        return
-
     try:
-        g = Github(token)
-        repo_obj = g.get_repo(repo)
+        # Get GitHub token and repository name
+        token = get_github_token()
+        repo_name = get_repo_name()
         
-        # Get the current content of the file
-        current_content = get_file_content(py_file)
-        if not current_content:
-            print(f"Could not get current content of {py_file}")
-            return
-            
-        # Parse the file to get function/class definitions
-        try:
-            tree = ast.parse(current_content)
-        except SyntaxError:
-            print(f"Error parsing {py_file}")
+        # Initialize GitHub client
+        g = Github(token)
+        repo = g.get_repo(repo_name)
+        
+        # Get file content
+        content = get_file_content(file_path)
+        if not content:
+            print(f"Error: Could not get content for {file_path}")
             return
             
         # Extract function and class definitions
-        changes = []
+        tree = ast.parse(content)
+        definitions = []
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
-                # Get the source code of the node
-                source = ast.get_source_segment(current_content, node)
-                if source:
-                    changes.append(source)
+                definitions.append(node.name)
         
-        # Create the issue body
-        body = f"The file `{py_file}` has been modified. Please review and update the documentation for the following changes:\n\n"
-        for change in changes:
-            body += f"```python\n{change}\n```\n\n"
-            
-        body += "This is an automated issue created because the Azure2 OpenAI API key is not available. Please manually update the documentation as needed.\n\n"
-        body += "Steps to Update Documentation:\n"
-        body += f"1. Review the changes in `{py_file}`\n"
-        body += f"2. Update the corresponding documentation in `src/api/{os.path.splitext(os.path.basename(py_file))[0]}.md`\n"
-        body += "3. Create a pull request with the documentation updates"
+        # Format the issue body
+        body = f"""# API Documentation Update Required
+
+The following changes were detected in {file_path}:
+
+## Changes Detected
+{format_changes(changes)}
+
+## Current Definitions
+{chr(10).join(f'- {defn}' for defn in definitions)}
+
+## Required Actions
+1. Review the changes in {file_path}
+2. Update the documentation to reflect these changes
+3. Ensure all new functions/classes are properly documented
+
+Note: This issue was created automatically because the OpenAI API key was not available for automatic documentation updates.
+
+## Labels
+- documentation
+- help wanted
+- good first issue
+"""
         
-        # Create the issue with labels
-        repo_obj.create_issue(
-            title="Documentation Update Needed",
+        # Create the issue
+        repo.create_issue(
+            title=f"Documentation Update Required: {file_path}",
             body=body,
             labels=["documentation", "help wanted", "good first issue"]
         )
-        print("Created issue for API failure")
+        print(f"Created issue for {file_path}")
+        
     except Exception as e:
-        print(f"Error creating issue: {e}")
+        print(f"Error creating issue: {str(e)}")
 
 def create_github_issue(title: str, body: str) -> None:
     """Create a GitHub issue with the given title and body."""
@@ -348,6 +349,78 @@ def create_github_issue(title: str, body: str) -> None:
         print(f"Title: {title}")
         print(f"Body:\n{body}")
 
+def get_openai_client() -> Optional[OpenAI]:
+    """Get authenticated OpenAI client."""
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        print("ERROR: OPENAI_API_KEY environment variable is not set")
+        return None
+
+    try:
+        return OpenAI(api_key=api_key)
+    except Exception as e:
+        print(f"ERROR: Failed to create OpenAI client: {e}")
+        return None
+
+def check_documentation(file_path: str, content: str) -> dict:
+    """Check if documentation needs to be updated using OpenAI API."""
+    try:
+        API_KEY = os.getenv("GEMINI_API_KEY")  # replace with your actual key
+        API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
+
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        data = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": "hey"}
+                    ]
+                }
+            ]
+        }
+
+        response = requests.post(API_URL, headers=headers, data=json.dumps(data))
+            
+        prompt = f"""Analyze the following Python code and determine if documentation needs to be updated in concise form.
+        Return a JSON response with two fields:
+        1. change_required: boolean indicating if documentation needs to be updated
+        2. updated_doc: string containing the updated documentation if change_required is true, null otherwise
+
+        Code:
+        {content}
+
+        Current documentation:
+        {get_current_documentation(file_path)}
+
+        Return only the JSON response, no other text."""
+
+        data = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt}
+                    ]
+                }
+            ]
+        }
+
+        response = requests.post(API_URL, headers=headers, data=json.dumps(data))
+        
+        try:
+           result = response.json()
+           output = result["candidates"][0]["content"]["parts"][0]["text"]
+           return output
+        except json.JSONDecodeError:
+            print("ERROR: Failed to parse LLM response as JSON")
+            return {"change_required": True, "updated_doc": None}
+            
+    except Exception as e:
+        print(f"ERROR: Failed to check documentation: {e}")
+        return {"change_required": True, "updated_doc": None}
+
 def analyze_changes(file_path: str) -> None:
     """Analyze changes between current and previous versions of a file."""
     if not file_path or not isinstance(file_path, str):
@@ -367,6 +440,12 @@ def analyze_changes(file_path: str) -> None:
             )
             return
         
+        # Check if documentation needs to be updated
+        doc_check = check_documentation(file_path, current_content)
+        if not doc_check["change_required"]:
+            print("No documentation changes required")
+            return
+            
         previous_content = get_previous_content(file_path)
         if not previous_content:
             print(f"No previous version found for {file_path}, treating as new file")
@@ -376,11 +455,11 @@ def analyze_changes(file_path: str) -> None:
                 body = f"The file {file_path} has been modified. Please review and update the documentation for the following changes:\n\n"
                 for name, element in current_elements.items():
                     if element['type'] == 'function':
-                        body += f"```python\n{name}{element['signature']}\n"
+                        body += f"python\n{name}{element['signature']}\n"
                         if element['docstring']:
                             body += f'"""{element["docstring"]}"""\n'
-                        body += "```\n\n"
-                body += "This is an automated issue created because the Azure00 OpenAI API key is not available. Please manually update the documentation as needed.\n\n"
+                        body += "\n\n"
+                body += "This is an automated issue created because the OpenAI API key is not available. Please manually update the documentation as needed.\n\n"
                 body += "Steps to Update Documentation:\n"
                 body += f"1. Review the changes in {file_path}\n"
                 body += f"2. Update the corresponding documentation in src/api/{os.path.splitext(os.path.basename(file_path))[0]}.md\n"
@@ -408,11 +487,12 @@ def analyze_changes(file_path: str) -> None:
             if change['type'] == 'added' and change['name'] in current_elements:
                 element = current_elements[change['name']]
                 if element['type'] == 'function':
-                    body += f"```python\n{change['name']}{element['signature']}\n"
+                    body += f"python\n{change['name']}{element['signature']}\n"
                     if element['docstring']:
                         body += f'"""{element["docstring"]}"""\n'
-                    body += "```\n\n"
-        body += "This is an automated issue created because the Azure01 OpenAI API key is not available. Please manually update the documentation as needed.\n\n"
+                    body += "\n\n"
+        
+        body += "This is an automated issue created because the OpenAI API key is not available. Please manually update the documentation as needed.\n\n"
         body += "Steps to Update Documentation:\n"
         body += f"1. Review the changes in {file_path}\n"
         body += f"2. Update the corresponding documentation in src/api/{os.path.splitext(os.path.basename(file_path))[0]}.md\n"
@@ -428,30 +508,20 @@ def analyze_changes(file_path: str) -> None:
             f"Error message: {error_msg}\n\nPlease check the file and try again."
         )
 
-# openai.api_type = "azure"
-# openai.api_key = os.getenv("AZURE_OPENAI_KEY")
-# openai.api_base = os.getenv("AZURE_OPENAI_BASE_URL")
-# openai.api_version = os.getenv("AZURE_OPENAI_API_VERSION")
+def get_current_documentation(file_path: str) -> str:
+    """Get current documentation from the API folder."""
+    doc_path = f"src/api/{os.path.splitext(os.path.basename(file_path))[0]}.md"
+    try:
+        if os.path.exists(doc_path):
+            with open(doc_path, 'r', encoding='utf-8') as f:
+                return f.read()
+    except Exception as e:
+        print(f"Error reading documentation: {e}")
+    return "No existing documentation found."
 
-
-# def test_api_key():
-#     try:
-#         deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT")
-#         response = openai.ChatCompletion.create(
-#             engine=deployment_name,
-#             messages=[{"role": "user", "content": "Hello from GitHub Actions!"}],
-#             temperature=0.7,
-#             max_tokens=100,
-#         )
-
-#         print("API Response:", response.choices[0].message.content)
-#         return True
-#     except Exception as e:
-#         print("Error:", str(e))
-#         return False
-
-if __name__ == '__main__':
+if _name_ == '_main_':
     if len(sys.argv) != 2:
         print("Usage: python analyze_py_changes.py <file_path>")
         sys.exit(1)
+    
     analyze_changes(sys.argv[1])
