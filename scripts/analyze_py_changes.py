@@ -501,7 +501,7 @@ def get_current_documentation(file_path: str) -> str:
         print(f"Error reading documentation: {e}")
     return "No existing documentation found."
 
-if _name_ == '_main_':
+if __name__ == '_main_':
     if len(sys.argv) != 2:
         print("Usage: python analyze_py_changes.py <file_path>")
         sys.exit(1)
