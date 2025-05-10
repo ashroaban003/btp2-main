@@ -31,7 +31,7 @@ def test_api_key():
 
     if response.status_code == 200:
         result = response.json()
-        print("💬 Gemini Response:\n"+result)
+        print("💬 Gemini Response:\n"+result['candidates'][0]['content']['parts'][0]['text'])
         return True
     else:
         False
