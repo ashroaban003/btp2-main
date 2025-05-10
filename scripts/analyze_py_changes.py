@@ -348,41 +348,19 @@ def create_github_issue(title: str, body: str) -> None:
         print(f"Title: {title}")
         print(f"Body:\n{body}")
 
-def get_openai_client() -> Optional[OpenAI]:
-    """Get authenticated OpenAI client."""
-    api_key = os.getenv('OPENAI_API_KEY')
-    if not api_key:
-        print("ERROR: OPENAI_API_KEY environment variable is not set")
-        return None
-
-    try:
-        return OpenAI(api_key=api_key)
-    except Exception as e:
-        print(f"ERROR: Failed to create OpenAI client: {e}")
-        return None
-
 def check_documentation(file_path: str, content: str) -> dict:
-    """Check if documentation needs to be updated using OpenAI API."""
+    """Check if documentation needs to be updated using Gemini API."""
     try:
-        API_KEY = os.getenv("GEMINI_API_KEY")  # replace with your actual key
+        API_KEY = os.getenv("GEMINI_API_KEY")
+        if not API_KEY:
+            raise ValueError("GEMINI_API_KEY environment variable is not set")
+
         API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={API_KEY}"
 
         headers = {
             "Content-Type": "application/json"
         }
 
-        data = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": "hey"}
-                    ]
-                }
-            ]
-        }
-
-        response = requests.post(API_URL, headers=headers, data=json.dumps(data))
-            
         prompt = f"""Analyze the following Python code and determine if documentation needs to be updated in concise form.
         Return a JSON response with two fields:
         1. change_required: boolean indicating if documentation needs to be updated
@@ -399,23 +377,28 @@ def check_documentation(file_path: str, content: str) -> dict:
         data = {
             "contents": [
                 {
-                    "parts": [
-                        {"text": prompt}
-                    ]
+                    "parts": [{"text": prompt}]
                 }
             ]
         }
 
         response = requests.post(API_URL, headers=headers, data=json.dumps(data))
-        
-        try:
-           result = response.json()
-           output = result["candidates"][0]["content"]["parts"][0]["text"]
-           return output
-        except json.JSONDecodeError:
-            print("ERROR: Failed to parse LLM response as JSON")
+
+        if response.status_code != 200:
+            print(f"ERROR: Gemini API call failed: {response.status_code} - {response.text}")
             return {"change_required": True, "updated_doc": None}
-            
+
+        result = response.json()
+        raw_output = result["candidates"][0]["content"]["parts"][0]["text"]
+
+        # Try parsing the output as JSON
+        try:
+            parsed_output = json.loads(raw_output)
+            return parsed_output
+        except json.JSONDecodeError:
+            print("ERROR: Failed to parse Gemini output as JSON")
+            return {"change_required": True, "updated_doc": None}
+
     except Exception as e:
         print(f"ERROR: Failed to check documentation: {e}")
         return {"change_required": True, "updated_doc": None}
